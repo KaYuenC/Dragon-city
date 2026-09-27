@@ -1,0 +1,489 @@
+import random
+import time
+
+#map location grid variables
+mapindx = 0
+temp = 0
+playerloca = 0
+enemyloca = []
+treasureloca = []
+poweruploca = []
+safezoneloca = []
+occupiedpos = [playerloca]
+
+map = [
+    "~", "~", "~", "~", "~",
+    "~", "~", "~", "~", "~",
+    "~", "~", "~", "~", "~",
+    "~", "~", "~", "~", "~",
+    "~", "~", "~", "~", "~"
+]
+#- - - - -- - - - -
+
+# game variables
+health = 100
+money = 0
+items = []
+score = 0
+turnno = 0
+buyable = [
+    ["Apple","Heals 20 health",30], #1 = itemname, 2 = item description, 3 = item cost
+    ["Shield","Makes you immune to damage for the next 5 turns",15],
+    ["Score Doubler","Grants double score for the next 5 turns",10]
+]
+#- - - - - - - -
+
+#extras
+endgame = False
+moveE = 0
+trap = 0
+attackplayer = 0
+itemwant = 0
+twopointleng = 0
+shieldleng = 0
+leaderboard = [] # name - score
+#- - - - - - -
+
+#customisables
+scorepturn = 2
+scorepmoney = 1
+pointppowerup = 4
+
+def generateboard():
+    global mapindx, map
+    print("\n")
+    mapindx = 0
+    #Print the board
+    for i in range(5):
+        for i in range(5):
+            print("[", end="")
+            print(map[mapindx], end="")
+            print("]", end="")
+            mapindx += 1
+        print("")
+    # - - - - - - - - -
+
+def moveturn():
+    global playerloca, enemyloca, treasureloca, poweruploca, safezoneloca, scorepturn, score, turnno, items, health, shieldleng, twopointleng
+
+    print("\nEnter item name to use || Q to open shop")
+    move = str(input("What direction would you like to move? (W,A,S,D) : "))
+    if move not in ["W", "A", "S", "D","w","a","s","d","Q","q"]:
+        print("Please enter a valid input")
+
+    # process input
+    if move == "Q" or move == "q":
+        openshop()
+
+    if move == "W" or move == "w":
+        if playerloca > 4:
+            occupiedpos.remove(playerloca)
+            playerloca -= 5
+            occupiedpos.append(playerloca)
+            if twopointleng > turnno:
+                score += scorepturn*2
+            else:
+                score += scorepturn
+            turnno += 1
+            moveenemy()
+        else:
+            print("Please enter a valid input")
+            time.sleep(1)
+            return
+
+    if move == "S" or move == "s":
+        if playerloca <= 19:
+            occupiedpos.remove(playerloca)
+            playerloca += 5
+            occupiedpos.append(playerloca)
+            if twopointleng > turnno:
+                score += scorepturn * 2
+            else:
+                score += scorepturn
+            turnno += 1
+            moveenemy()
+        else:
+            print("Please enter a valid input")
+            time.sleep(1)
+            return
+
+    if move == "A" or move == "a":
+        if playerloca not in [0,5,10,15,20]:
+            occupiedpos.remove(playerloca)
+            playerloca -= 1
+            occupiedpos.append(playerloca)
+            if twopointleng > turnno:
+                score += scorepturn * 2
+            else:
+                score += scorepturn
+            turnno += 1
+            moveenemy()
+        else:
+            print("Please enter a valid input")
+            time.sleep(1)
+            return
+
+    if move == "D" or move == "d":
+        if playerloca not in [4,9,14,19,24]:
+            occupiedpos.remove(playerloca)
+            playerloca += 1
+            occupiedpos.append(playerloca)
+            if twopointleng > turnno:
+                score += scorepturn * 2
+            else:
+                score += scorepturn
+            turnno += 1
+            moveenemy()
+        else:
+            print("Please enter a valid input")
+            time.sleep(1)
+            return
+
+    for i in range(len(items)):
+        if move == items[i]:
+
+            if items[i] == buyable[0][0]:
+                health += 20
+                items.remove(items[i])
+                break
+
+            if items[i] == buyable[1][0]:
+                shieldleng = turnno + 5
+                items.remove(items[i])
+                break
+
+            if items[i] == buyable[2][0]:
+                twopointleng = turnno + 5
+                items.remove(items[i])
+                break
+
+
+
+    #- - - - - - - -
+
+def placeitems():
+    global enemyloca, treasureloca, poweruploca, safezoneloca,mapindx, map
+    map = [
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~"
+    ]
+    mapindx = 0
+    #place items on board
+    for i in range(len(enemyloca)):
+        map[enemyloca[i]] = "E"
+
+    for i in range(len(treasureloca)):
+        map[treasureloca[i]] = "T"
+
+    for i in range(len(poweruploca)):
+        map[poweruploca[i]] = "P"
+
+    for i in range(len(safezoneloca)):
+        map[safezoneloca[i]] = "S"
+
+    map[playerloca] = "D"
+
+    #- - - - - - - -w
+
+def randomboard():
+    global enemyloca, treasureloca, poweruploca, safezoneloca, temp
+    for i in range(int(difficulty)):
+        while temp in occupiedpos: #add enemies
+            temp = random.randint(0,24)
+        enemyloca.append(temp)
+        occupiedpos.append(temp)
+        temp = random.randint(0, 24)
+
+    while temp in occupiedpos:#add treasure
+        temp = random.randint(0,24)
+    treasureloca.append(temp)
+    occupiedpos.append(temp)
+
+    while temp in occupiedpos: #add power up
+        temp = random.randint(0,24)
+    poweruploca.append(temp)
+    occupiedpos.append(temp)
+
+    while temp in occupiedpos:#add safe zone
+        temp = random.randint(0,24)
+    safezoneloca.append(temp)
+    occupiedpos.append(temp)
+
+    return
+
+def resetvar():
+
+    global enemyloca, treasureloca, poweruploca, safezoneloca, mapindx, map, occupiedpos,temp,health,money,items,playerloca,score,turnno,endgame
+    # map location grid variables
+    mapindx = 0
+    temp = 0
+    playerloca = 0
+    enemyloca = []
+    treasureloca = []
+    poweruploca = []
+    safezoneloca = []
+    occupiedpos = [playerloca]
+
+    map = [
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~",
+        "~", "~", "~", "~", "~"
+    ]
+    # - - - - -- - - - -
+
+    # game variables
+    health = 100
+    money = 0
+    items = []
+    score = 0
+    turnno = 0
+    # - - - - - - - -
+
+    # extras
+    endgame = False
+    # - - - - - - -
+
+def printstats():
+    global enemyloca, treasureloca, poweruploca, score
+    score = score*((int(difficulty)/2)+0.5)
+    time.sleep(1)
+    print("Your final score is", score,"!!!")
+    print("Multiplier : ",((int(difficulty)/2)+0.5))
+    time.sleep(0.5)
+    print("You had",money,"coins remaining")
+    time.sleep(0.5)
+    if len(items) != 0:
+        print("The items you left unused are : ",items)
+    else:
+        print("You had no remaining items")
+    time.sleep(0.5)
+
+def checkconditions():
+    global enemyloca, treasureloca, poweruploca, safezoneloca, mapindx, map, occupiedpos,temp,health,money,items,playerloca,score,endgame,shieldleng, turnno
+    # Ending - - -
+    if playerloca in safezoneloca:
+        for i in range(5):
+            print(" ")
+
+        print("You reached the safe zone!")
+        time.sleep(1)
+        score += money * scorepmoney
+        printstats() # print final stats
+        ans = input("Do you want to play again? (Y/N) : ")
+        if ans == "Y" or ans == "y":
+            resetvar()
+            randomboard()
+            placeitems()
+            endgame = False
+        if ans == "N" or ans == "n":
+            endgame = True
+    #- - - - - - - - - - -
+
+    #reduce health
+    if playerloca in enemyloca:
+        if not shieldleng > turnno:
+            health -= 20
+
+        enemyloca.remove(playerloca)
+        occupiedpos.remove(playerloca)
+        temp = random.randint(0, 24)
+
+        while temp in occupiedpos:  # add enemy
+            temp = random.randint(0, 24)
+        enemyloca.append(temp)
+        occupiedpos.append(temp)
+    #- - - - - - - - - -- - - -
+
+    #Caught by opposing dragons
+    if health <= 0:
+        for i in range(5):
+            print(" ")
+        print("You got ambushed by opposing dragons...")
+        time.sleep(1)
+        score += money*scorepmoney
+        score = score/2
+        printstats()  # print final stats
+        ans = input("Do you want to play again? (Y/N) : ")
+        if ans == "Y" or ans == "y":
+            resetvar()
+            randomboard()
+            placeitems()
+            endgame = False
+        if ans == "N" or ans == "n":
+            endgame = True
+    # - - - - - - - - - - -
+
+    #pick money up
+    if playerloca in treasureloca:
+        money += 10
+        treasureloca.remove(playerloca)
+        occupiedpos.remove(playerloca)
+        temp = random.randint(0, 24)
+
+        while temp in occupiedpos:  # add health and score
+            temp = random.randint(0, 24)
+        treasureloca.append(temp)
+        occupiedpos.append(temp)
+    #- - - - - - - - - -
+
+    #pick power up up
+    if playerloca in poweruploca:
+        health += 5
+        poweruploca.remove(playerloca)
+        occupiedpos.remove(playerloca)
+        if twopointleng > turnno:
+            score += pointppowerup * 2
+        else:
+            score += pointppowerup
+        temp = random.randint(0, 24)
+
+        while temp in occupiedpos:  # add treasure
+            temp = random.randint(0, 24)
+        poweruploca.append(temp)
+        occupiedpos.append(temp)
+    #- - - - - - - - - -
+
+def displayui():
+    global twopointleng, shieldleng
+    print("\n\n\n")
+    print("-TURN",turnno,"-")
+    print("your current score is :",score)
+    print("You have",health,"health remaining")
+    print("you have",money,"coins remaining")
+    print("you have",items,"items remaining")
+
+    if twopointleng > turnno:
+        print("Double points duration remaining : ",twopointleng-turnno)
+    if shieldleng > turnno:
+        print("Shield duration remaining : ", shieldleng - turnno)
+
+def moveenemy():
+    global enemyloca, playerloca,occupiedpos,moveE, trap, attackplayer
+    attackplayer = 0
+    for i in range(len(enemyloca)):
+        valid = False
+        trap = 0
+        while valid == False:
+            moveE = random.randint(0, 4)
+            trap += 1
+            # process input
+            if moveE == 0:
+                if playerloca == enemyloca[i]-5 and attackplayer == 0:
+                    attackplayer = 1
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] -= 5
+                    occupiedpos.append(enemyloca[i])
+
+                elif enemyloca[i] > 4 and enemyloca[i]-5 not in occupiedpos:
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] -= 5
+                    occupiedpos.append(enemyloca[i])
+
+            if moveE == 1:
+                if playerloca == enemyloca[i]+5 and attackplayer == 0:
+                    attackplayer = 1
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] += 5
+                    occupiedpos.append(enemyloca[i])
+
+                elif enemyloca[i] <= 19 and enemyloca[i]+5 not in occupiedpos:
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] += 5
+                    occupiedpos.append(enemyloca[i])
+
+            if moveE == 2:
+                if playerloca == enemyloca[i]-1 and attackplayer == 0:
+                    attackplayer = 1
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] -= 1
+                    occupiedpos.append(enemyloca[i])
+
+                elif enemyloca[i] not in [0, 5, 10, 15, 20] and enemyloca[i]-1 not in occupiedpos:
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] -= 1
+                    occupiedpos.append(enemyloca[i])
+
+            if moveE == 3:
+                if playerloca == enemyloca[i]+1 and attackplayer == 0:
+                    attackplayer = 1
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] += 1
+                    occupiedpos.append(enemyloca[i])
+
+                elif enemyloca[i] not in [4, 9, 14, 19, 24] and enemyloca[i]+1 not in occupiedpos:
+                    valid = True
+                    occupiedpos.remove(enemyloca[i])
+                    enemyloca[i] += 1
+                    occupiedpos.append(enemyloca[i])
+
+            if moveE == 4:
+                valid = True
+
+            if trap > 16:
+                valid = True
+                break
+
+def openshop():
+    global money,items,buyable, itemwant
+    itemwant = 0
+    while True:
+        print("\n\n\n\n ITEM SHOP")
+        print("you have", money, "coins remaining")
+        print(" ")
+        for i in range(len(buyable)):
+            for a in range(3):
+                if a == 2:
+                    print(buyable[i][a], "Coins")
+                else:
+                    print(buyable[i][a])
+            print(" ")
+
+        print("If none, write 'no'")
+        itemwant = str(input("What would you like to get? : "))
+
+        if itemwant.upper() == "NO":
+            break
+
+        for i in range(len(buyable)):
+            if str(buyable[i][0]).upper() == itemwant.upper() and int(buyable[i][2]) <= money:
+                items.append(buyable[i][0])
+                money -= buyable[i][2]
+                print("item bought successfully!")
+                time.sleep(1)
+                return
+
+        print("Not valid input")
+        time.sleep(1)
+
+while True:
+    difficulty = input("What do difficulty would you like? (1-4) : ")
+    if difficulty in [1,2,3,4,"1","2","3","4"]:
+        break
+
+randomboard()
+
+
+#gameloop
+while True:
+    placeitems()
+    checkconditions()
+    if endgame == True:
+        break
+    displayui()
+    generateboard()
+    moveturn()
+#- - - - -- - - - - - -
+
+print("Thanks for playing!\nPress run to play again")
